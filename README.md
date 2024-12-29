@@ -34,8 +34,8 @@ This Node.js script allows you to create a YouTube playlist from a list of songs
     - Go to the Google Developer Console.
     - Create a new project.
     - Enable the YouTube Data API v3.
-   -  Create OAuth 2.0 credentials and download the credentials.json file.
-   -  Rename this file to client_secret.json and place it in the root directory of this project.
+   -  Create OAuth 2.0 credentials and download the `credentials.json` file.
+   -  Rename this file to `client_secret.json` and place it in the root directory of this project.
 
 4. Create the configuration file:
 
@@ -92,4 +92,11 @@ youtube-playlist-manager/
 
 
 ## Future Scope:
-A web integration to add authenticate user accounts into it and directly create a playlist for them.
+- `Web Interface Integration`: Develop a web-based interface to allow users to authenticate their accounts and create playlists directly on YouTube.
+
+    - A user-friendly UI for entering YouTube API credentials, or alternatively, integrating a login feature to authenticate users directly via their Google account.
+    - Provide an interface to input raw song data, automatically process the list using AI (such as ChatGPT) to filter and refine the song search. Users will then be able to interact with the results—dragging and selecting songs before adding them to the playlist.
+
+- `Publish to npm`: Publish the project as a reusable npm package for easy installation and use by others.
+
+- `Add Support for ReasonML and TypeScript`: Extend the project by integrating support for ReasonML and TypeScript, enhancing its flexibility and developer experience.
