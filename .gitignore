@@ -3,3 +3,5 @@ __pycache__/
 *.pyc
 credentials.json  # Your OAuth file should never be shared publicly!
 node_modules/
+client_secret.json  # Your OAuth file should never be shared publicly!
+config.json  # Your config file should never be shared publicly!
