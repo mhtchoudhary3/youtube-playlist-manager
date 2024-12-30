@@ -1,5 +1,7 @@
-import  parseSongList  from "../src/songParser";
-import fs from "fs";
+// import  parseSongList  from "../src/songParser";
+const parseSongList = require('../src/songParser');
+// import fs from "fs";
+const fs = require('fs');
 
 // Mocking fs.readFileSync to avoid reading actual files during tests
 jest.mock("fs");
