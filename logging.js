@@ -11,14 +11,14 @@ const blue = "\x1b[34m";
 const magenta = "\x1b[35m";
 const cyan = "\x1b[36m";
 const white = "\x1b[37m";
-const blackText = '\x1b[30m';    // Black text
+const blackText = "\x1b[30m"; // Black text
 
 // Background color codes
 const bgRed = "\x1b[41m";
 const bgGreen = "\x1b[42m";
 const bgYellow = "\x1b[43m";
 const bgBlue = "\x1b[44m";
-const whiteBackground = '\x1b[48;5;15m';  // White background
+const whiteBackground = "\x1b[48;5;15m"; // White background
 
 // Usage example
 // console.log(`${green}This is a green message${reset}`);
@@ -29,25 +29,23 @@ const whiteBackground = '\x1b[48;5;15m';  // White background
 // console.log(`${cyan}This is a cyan message${reset}`);
 // console.log(`${bgRed}${white}This is text with a red background${reset}`);
 
-
 // Function to log errors in red
 export function logError(msg, error = null) {
   //  let errorDetails = error ? `- ${error.message}` : '';
-    console.log(`${red}Error: ${reset} ${msg} ${error}`);
-  }
+  console.log(`${red}Error: ${reset} ${msg} ${error}`);
+}
 
 // Function to log info messages in green
 export function logInfo(msg) {
-    console.log(`${green}Info : ${reset} ${msg}`);
+  console.log(`${green}Info : ${reset} ${msg}`);
 }
 
 // Function to log debug messages in yellow
 export function logDebug(msg) {
-    console.log(`${yellow}Debug : ${reset} ${msg}`);
+  console.log(`${yellow}Debug : ${reset} ${msg}`);
 }
 
 // Function to log summary messages with a white background and black text
 export function logSummary(msg) {
-    console.log(`${whiteBackground}${blackText} Summary: ${msg} ${reset}`);
-  }
-  
+  console.log(`${whiteBackground}${blackText} Summary: ${msg} ${reset}`);
+}
