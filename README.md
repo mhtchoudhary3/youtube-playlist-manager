@@ -37,17 +37,6 @@ This Node.js script allows you to create a YouTube playlist from a list of songs
    -  Create OAuth 2.0 credentials and download the `credentials.json` file.
    -  Rename this file to `client_secret.json` and place it in the root directory of this project.
 
-4. Create the configuration file:
-
-   -  Create a file named `config.json` in the root directory and add your API key and OAuth access token (you can get the access token after OAuth authentication).
-
-      ```json
-      {
-      "api_key": "YOUR_YOUTUBE_API_KEY",
-      "access_token": "YOUR_OAUTH_ACCESS_TOKEN"
-      }
-      ```
-
 4. Create the Required Files:
    - `songs.txt`: You can add the song data in any format, and the code will attempt to parse it into the appropriate format. However, the recommended approach is to add one song title per line. For example:
       ```txt

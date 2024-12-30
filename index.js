@@ -1,10 +1,11 @@
-const fs = require("fs");
-const axios = require("axios");
-const authorize = require("./auth");
+import fs from 'fs';
+import axios from 'axios';
+import  authorize  from './auth.js';
+
 
 let config;
 try {
-  credentials = JSON.parse(fs.readFileSync("config.json", "utf8"));
+  config = JSON.parse(fs.readFileSync("config.json", "utf8"));
   console.log("Successfully loaded token file.");
 } catch (error) {
   console.error("Error reading or parsing config.json:", error);
@@ -113,14 +114,14 @@ async function main() {
     for (const playlist of playlists) {
       if (playlist.snippet.title === playlistTitle) {
         playlistId = playlist.id;
-        console.log(`Playlist '${playlistTitle}' already exists. ID: ${playlistId}`);
+        console.log(`Playlist '${playlistTitle}' already exists. ID: ${playlistId} & playlistTitle: ${playlistTitle}`);
         break;
       }
     }
 
     if (!playlistId) {
       playlistId = await createPlaylist(playlistTitle, playlistDescription);
-      console.log(`Created new playlist. ID: ${playlistId}`);
+      console.log(`Created new playlist. ID: ${playlistId} & playlistTitle: ${playlistTitle}`);
     }
 
     const songs = parseSongList("songs.txt");

@@ -27,7 +27,7 @@ try {
 }
 
 // Authorize the client with the given credentials
-function authorize(callback) {
+export default function  authorize(callback) {
   const { client_secret, client_id, redirect_uris } = credentials.web;
   const oAuth2Client = new google.auth.OAuth2(client_id, client_secret, REDIRECT_URL);
 
@@ -105,4 +105,4 @@ function getNewToken(oAuth2Client, callback) {
 authorize((authClient) => {
   console.log("Authorization complete, access token stored!");
   // You can now use `authClient` to make authorized requests to the YouTube API
-}); 
+});
