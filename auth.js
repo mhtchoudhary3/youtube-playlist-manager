@@ -11,9 +11,10 @@ import readline from "readline";
 import http from "http";
 import open from "open";  // Import as an ES module
 
+let Oauth2Port = 27862;
 const SCOPES = ["https://www.googleapis.com/auth/youtube"];
 const TOKEN_PATH = "config.json";  // Save the token here
-const REDIRECT_URL = "http://localhost:3000";  // Redirect URI
+const REDIRECT_URL = "http://localhost:" + Oauth2Port  ;  // Redirect URI
 
 // Load the OAuth2 client secrets
 let credentials;
@@ -62,20 +63,6 @@ function handleToken (oAuth2Client, token)  {
   }
 };
 
-function handleCode (oAuth2Client, code) {
-  oAuth2Client.getToken(code, (err, token) => {
-    if (err) {
-      console.error("Error retrieving access token:", err);
-      return;
-    }
-
-    handleToken(oAuth2Client, token);
-    res.end("Authentication successful! You can close this window.");
-    callback(oAuth2Client);
-    server.close();  // Close the server after the token exchange is complete
-  });
-};
-
 // Get and store a new token after prompting for user authorization
 function getNewToken(oAuth2Client, callback) {
   const authUrl = oAuth2Client.generateAuthUrl({
@@ -88,17 +75,26 @@ function getNewToken(oAuth2Client, callback) {
 
   // Create a local server to handle the OAuth callback
   const server = http.createServer((req, res) => {
-    console.log("Incoming request URL:", req);  // Log the URL of the request
-
-    if (url.indexOf("/?code=") > -1) {
-      const code = new URL(url, `http://${req.headers.host}`).searchParams.get("code");
+    console.log("Incoming request URL:", req.url);  // Log the URL of the request
+    if (req.url.indexOf("/?code=") > -1) {
+      const code = new URL(req.url, `http://${req.headers.host}`).searchParams.get("code");
       console.log("Code received. Exchanging for token...");
-      return handleCode(oAuth2Client, code);
+      oAuth2Client.getToken(code, (err, token) => {
+        if (err) {
+          console.error("Error retrieving access token:", err);
+          return;
+        }
+    
+        handleToken(oAuth2Client, token);
+        res.end("Authentication successful! You can close this window.");
+        callback(oAuth2Client);
+        server.close();  // Close the server after the token exchange is complete
+      });
     }
   });
 
-  server.listen(3000, () => {
-    console.log("Listening on http://localhost:3000");
+  server.listen(Oauth2Port, () => {
+    console.log("Listening on http://localhost:" + Oauth2Port);
   });
 
   // Open the URL in the browser for the user to authenticate
