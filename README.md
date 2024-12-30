@@ -36,30 +36,41 @@ This Node.js script allows you to create a YouTube playlist from a list of songs
     - Enable the YouTube Data API v3.
    -  Create OAuth 2.0 credentials and download the `credentials.json` file.
    -  Rename this file to `client_secret.json` and place it in the root directory of this project.
+  
+4. Set Up API Key (for YouTube Data API):
 
-4. Create the Required Files:
+    - Create a .env file in the root directory of your project (this file will store your sensitive information like the API Key).
+         - Add the following line in the .env file:
+            ```text
+            YOUTUBE_API_KEY=your_api_key_here
+            ```
+
+            Replace your_api_key_here with the actual API key you obtained.
+
+    - Create a YouTube API Key:
+        - Go to the Google Developer Console.
+        - Navigate to Credentials, then click Create Credentials and select API Key.
+        - Copy the API Key.
+
+5. Create the Required Files:
    - `songs.txt`: You can add the song data in any format, and the code will attempt to parse it into the appropriate format. However, the recommended approach is to add one song title per line. For example:
       ```txt
-      Shape of You
-      Rolling in the Deep
-      Hotel California
+      Shape of You.mp3
+      Rolling in the Deep.mp4
+      Hotel California.mp3
       ```
 
 ## Usage
 ### Authenticate and Run the Script
-1. Authenticate: Run the script to authenticate and generate your OAuth token.
 
-   ```bash
-   node auth.js
-   ```
-
-2. Run the main script: Execute the script to manage your playlist.
+1. Run the main script: Execute the script to manage your playlist.
    ```bash
    node index.js
    ```
 
     This will:
 
+      - Authenticate and generate your OAuth token.
       - Check if the playlist exists.
       - Create the playlist if it doesn't.
       - Parse the song list from songs.txt.
@@ -68,8 +79,9 @@ This Node.js script allows you to create a YouTube playlist from a list of songs
 ## Project Structure
 ```graphql
 youtube-playlist-manager/
-├── client_secret.json        # OAuth 2.0 client secrets file (download from Google Developer Console)
-├── config.json              # Configuration file containing API key and OAuth token
+├── client_secret.json       # OAuth 2.0 client secrets file (download from Google Developer Console)
+├── OAuthTokenConfig.json    # Configuration file containing API key and OAuth token
+├── .env                     # Environment file containing sensitive credentials like API keys
 ├── songs.txt                # List of songs to search for and add to the playlist
 ├── index.js                 # Main script to manage playlist and add videos
 ├── auth.js                  # Script to authenticate with Google OAuth 2.0
@@ -78,7 +90,19 @@ youtube-playlist-manager/
 └── README.md                # This readme file
 ```
 
+## Quota Information
 
+### Note:
+
+- Quota per project per day: 10,000 quota units per day for free-tier users.
+- These 10,000 quota units are shared across all API requests made by your project.
+
+### Example of quota usage:
+
+- **Search** (for videos, playlists, channels): **100 units** per request.
+- **Playlist operations** (create, list, insert items): **50 units** per request.
+- **Video operations** (get video details, rate video): **1 unit per** request.
+- **Channel operations** (get channel info, subscriptions): **1 unit** per request.
 
 ## Future Scope:
 - `Web Interface Integration`: Develop a web-based interface to allow users to authenticate their accounts and create playlists directly on YouTube.
@@ -89,3 +113,6 @@ youtube-playlist-manager/
 - `Publish to npm`: Publish the project as a reusable npm package for easy installation and use by others.
 
 - `Add Support for ReasonML and TypeScript`: Extend the project by integrating support for ReasonML and TypeScript, enhancing its flexibility and developer experience.
+
+
+

@@ -5,3 +5,5 @@ credentials.json
 node_modules/
 client_secret.json 
 config.json
+.env
+OAuthToken.json
