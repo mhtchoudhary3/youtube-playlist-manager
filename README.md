@@ -94,10 +94,19 @@ youtube-playlist-manager/
 ├── .env                     # Environment file containing sensitive credentials like API keys
 ├── songs.txt                # List of songs to search for and add to the playlist
 ├── index.js                 # Main script to manage playlist and add videos
-├── auth.js                  # Script to authenticate with Google OAuth 2.0
 ├── package.json             # Project dependencies and metadata
 ├── package-lock.json        # Locked versions of dependencies
 └── README.md                # This readme file
+
+# Source code
+└── src/
+    ├── auth.js                # Script to authenticate with Google OAuth 2.0
+    ├── logging.js             # Script for logging utility
+    ├── songParser.js          # Script that contains the song parsing logic
+
+# Tests
+└── tests/
+    ├── songParser.test.js     # Jest unit tests for the song parsing logic (songParser.js)
 ```
 
 ## Quota Information
