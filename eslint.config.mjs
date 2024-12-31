@@ -31,17 +31,17 @@ export default [
       sourceType: 'module',
     },
     ignores: [
-        '**/node_modules/**', // Ignore node_modules folder
-        '**/dist/**',          // Ignore dist folder (if you have one)
-        '**/*.min.js',         // Ignore minified JS files
-        '**/*.bundle.js',      // Ignore bundle JS files
-        './coverage/**',         // Ignore coverage directory
-        '.eslintrc.js',         // Ignore ESLint config file itself (if needed)
-        '.prettierrc',          // Ignore Prettier config file (if needed)
+      '**/node_modules/**', // Ignore node_modules folder
+      '**/dist/**', // Ignore dist folder (if you have one)
+      '**/*.min.js', // Ignore minified JS files
+      '**/*.bundle.js', // Ignore bundle JS files
+      './coverage/**', // Ignore coverage directory
+      '.eslintrc.js', // Ignore ESLint config file itself (if needed)
+      '.prettierrc', // Ignore Prettier config file (if needed)
     ],
     rules: {
-        'constructor-super': 'error',
-        // Add or override rules here if needed
-      },
+      'constructor-super': 'error',
+      // Add or override rules here if needed
+    },
   },
 ];
