@@ -18,6 +18,7 @@ const sanitizedGlobals = Object.fromEntries(
   Object.entries({
     ...globals.node,
     ...globals.browser,
+    structuredClone: 'readonly',
   }).map(([key, value]) => [key.trim(), value]),
 );
 
