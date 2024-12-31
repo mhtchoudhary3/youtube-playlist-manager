@@ -39,5 +39,9 @@ export default [
         '.eslintrc.js',         // Ignore ESLint config file itself (if needed)
         '.prettierrc',          // Ignore Prettier config file (if needed)
     ],
+    rules: {
+        'constructor-super': 'error',
+        // Add or override rules here if needed
+      },
   },
 ];
