@@ -1,10 +1,31 @@
-venv/
-__pycache__/
-*.pyc
-credentials.json 
+# Node.js
 node_modules/
+npm-debug.log
+yarn-debug.log
+yarn-error.log
+
+# Python
+venv/
+.env
+
+# Jest
+coverage/
+
+# Sensitive files
+*.json
+
+# Logs
+*.log
+
+# OS generated files
+.DS_Store
+Thumbs.db
+
+# Prettier files
+.prettierignore
+
+# sensitive files
 client_secret.json 
 config.json
-.env
 OAuthToken.json
-coverage/
+credentials.json 
