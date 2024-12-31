@@ -1,9 +1,10 @@
-module.exports = {
-    transform: {
-      '^.+\\.js$': 'babel-jest', // This tells Jest to use Babel to transform JavaScript files
-    },
-    transformIgnorePatterns: [
-      '/node_modules/', 
-    ],
-  };
-  
+// Jest configuration
+import { defaults } from "jest-config";
+
+/** @type {import('jest').Config} */
+const config = {
+  moduleFileExtensions: [...defaults.moduleFileExtensions, "mts", "cts"],
+  transform: {},
+};
+
+export default config;

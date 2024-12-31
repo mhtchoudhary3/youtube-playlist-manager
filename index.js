@@ -1,10 +1,12 @@
 import fs from "fs";
 import axios from "axios";
 import authorize from "./src/auth.js";
-import { logError, logInfo, logDebug, logSummary } from "./src/logging.js"; 
-import  parseSongList  from "./src/songParser";
-
+import { logError, logInfo, logDebug, logSummary } from "./src/logging.js";
+import parseSongList from "./src/songParser.js";
+import checkQuota from "./src/apiQuota.js";
 import dotenv from "dotenv";
+import { APIError, handleError } from "./src/errorHandling.js";
+
 dotenv.config(); // Load environment variables from .env file
 
 const playlistTitle = "My New Playlist";
@@ -15,25 +17,57 @@ const playlistDescription = "A playlist created from a text list of songs";
  * OAuth 2.0 is used for accessing user-specific data, such as private playlists, uploaded videos, or managing content.
  */
 
+// Constants for quota cost per request
+const QUOTA_COST = {
+  search: 100, // Search API costs 100 units per request
+  playlist: 50, // Playlist operations (create, list, add) costs 50 units per request
+  video: 1, // Video-related operations (get video details, etc.) cost 1 unit per request
+};
+
+let totalQuotaUsed = 0; // Track total quota usage
 let oAuthTokenConfig;
 let ACCESS_TOKEN;
 let BASE_URL;
 let headers;
 const API_KEY = process.env.YOUTUBE_API_KEY;
 
+//When retrieving playlists or videos, always handle pagination to avoid hitting API limits.
+async function getAllPlaylists() {
+  let playlists = [];
+  let nextPageToken = null;
+
+  do {
+    const url = `${BASE_URL}/playlists?part=snippet&mine=true&pageToken=${
+      nextPageToken || ""
+    }`;
+    try {
+      const response = await axios.get(url, { headers });
+      playlists = playlists.concat(response.data.items || []);
+      nextPageToken = response.data.nextPageToken;
+      logInfo(`Fetched playlists page: ${nextPageToken}`);
+    } catch (error) {
+      handleError(error, "fetching playlists");
+      break;
+    }
+  } while (nextPageToken); // Continue fetching as long as there's a next page token
+
+  return playlists;
+}
+
 // Fetch playlists from the authenticated user
 async function getPlaylists() {
   const url = `${BASE_URL}/playlists?part=snippet&mine=true`;
   try {
     const response = await axios.get(url, { headers });
+    totalQuotaUsed += QUOTA_COST.playlist; // Add quota cost for playlist fetch
     logInfo(
       `Fetched playlists: ${response.data.items.length} playlists found.`
     );
     return response.data.items || [];
   } catch (error) {
     logDebug("Playlist URL: " + url);
-    logError("fetching playlists", error);
-    throw error; // Rethrow to stop execution
+    handleError(error, "fetching playlists");
+    throw new Error("PlayListFetchError");
   }
 }
 
@@ -46,23 +80,18 @@ async function createPlaylist(title, description) {
   const url = `${BASE_URL}/playlists?part=snippet,status`;
   try {
     const response = await axios.post(url, data, { headers });
+    totalQuotaUsed += QUOTA_COST.playlist; // Add quota cost for playlist creation
     logInfo(`Created new playlist: '${title}' with ID: ${response.data.id}`);
     return response.data.id;
   } catch (error) {
-    if (
-      error.response &&
-      error.response.data.error.code === 403 &&
-      error.response.data.error.errors[0].reason === "quotaExceeded"
-    ) {
-      logError("Quota exceeded. You have exceeded the daily API quota limit.");
-      // TODO: retry logic or wait until the quota is reset
-      return null;
-    } else {
-      logError("Error creating playlist", error);
-      throw error; // Rethrow to stop execution
-    }
+    handleError(error, "Error creating playlist");
+    throw new Error("PlayListCreateError");
   }
 }
+
+//Cache the results of previous searches and only perform a new search if the song is not already in the cache.
+const searchCache = {};
+
 /**
  * Search for multiple videos on YouTube using batch API calls
  * API Key is used for public access to the API (like searching public videos on YouTube).
@@ -71,9 +100,15 @@ async function createPlaylist(title, description) {
  */
 async function searchVideos(songs) {
   const batchRequests = songs.map((song) => {
+    if (searchCache[song]) {
+      logInfo(`Using cached result for '${song}'`);
+      return Promise.resolve(searchCache[song]);
+    }
+
     const url = `${BASE_URL}/search?part=snippet&q=${encodeURIComponent(
       song
     )}&type=video&key=${API_KEY}`;
+
     logDebug(`Request URL: ${url}`);
 
     return axios
@@ -81,6 +116,8 @@ async function searchVideos(songs) {
       .then((response) => {
         const items = response.data.items || [];
         if (items.length > 0) {
+          searchCache[song] = items[0].id.videoId; // Cache the result
+          totalQuotaUsed += QUOTA_COST.search; // Add quota cost for search
           logInfo(`Found video for '${song}': ${items[0].snippet.title}`);
           return items[0].id.videoId;
         } else {
@@ -89,34 +126,16 @@ async function searchVideos(songs) {
         }
       })
       .catch((error) => {
-        if (
-          error.response &&
-          error.response.data.error.code === 403 &&
-          error.response.data.error.errors[0].reason === "quotaExceeded"
-        ) {
-          logError(
-            "Quota exceeded. You have exceeded the daily API quota limit."
-          );
-          // TODO: retry logic or wait until the quota is reset
-        } else {
-          logError(`Error searching for video: '${query}'`);
-          logError(`Error Message: ${error.message}`);
-          if (error.response) {
-            logError(`Response Data: ${JSON.stringify(error.response.data)}`);
-          } else if (error.request) {
-            logError(`Request made but no response received`);
-          } else {
-            logError(`Error Type: ${error.name}`);
-          }
-        }
-        return null;
+        handleError(error, "Error during video search " + song);
+        throw new APIError("VideoSearchError", 500);
       });
   });
 
   return Promise.all(batchRequests); // Wait for all searches to complete
 }
 
-// Add a video to a playlist (batch operation)
+// Add videos to a playlist (batch operation)
+// Batch multiple requests into a single API call, rather than sending separate requests for each video.
 async function addVideosToPlaylist(playlistId, videoIds) {
   const data = videoIds
     .filter((videoId) => videoId !== null) // Filter out null values
@@ -132,32 +151,48 @@ async function addVideosToPlaylist(playlistId, videoIds) {
 
   if (data.length === 0) return;
 
-  const url = `${BASE_URL}/playlistItems?part=snippet`;
+  // Sending a batch request
+  const batch = youtube.newBatch();
+  data.forEach((item) => {
+    batch.add(
+      youtube.playlistItems.insert({
+        part: "snippet",
+        resource: item,
+      })
+    );
+  });
+
   try {
-    await axios.post(url, data, { headers });
+    const _response = await batch.execute();
+    totalQuotaUsed += QUOTA_COST.playlist * data.length; // Add quota cost for adding videos to playlist
     logInfo(`Added ${data.length} videos to playlist (ID: ${playlistId})`);
   } catch (error) {
-    if (
-      error.response &&
-      error.response.data.error.code === 403 &&
-      error.response.data.error.errors[0].reason === "quotaExceeded"
-    ) {
-      logError("Quota exceeded. You have exceeded the daily API quota limit.");
-      // TODO: retry logic or wait until the quota is reset
-    } else {
-      logError(`Error adding videos to playlist (ID: ${playlistId})`, error);
-    }
+    handleError(error, "Error while adding to playlist ID " + playlistId);
+    throw new APIError("PlayListSongAdditionError", 500);
   }
 }
 
+let recentVideos = {}; // Cache to track videos added recently
+
 // Check if a video already exists in the playlist
+// Before adding a video to the playlist, you can optimize checking whether the video already exists in the playlist by only checking if the video has been added in the last few days or if a certain amount of time has passed since the last check.
 async function isVideoInPlaylist(playlistId, videoId) {
+  if (recentVideos[videoId]) {
+    return true; // Skip checking if the video is recently added
+  }
+
   const url = `${BASE_URL}/playlistItems?part=snippet&playlistId=${playlistId}`;
   try {
     const response = await axios.get(url, { headers });
-    return response.data.items.some(
+    const isVideoInPlaylist = response.data.items.some(
       (item) => item.snippet.resourceId.videoId === videoId
     );
+
+    if (isVideoInPlaylist) {
+      recentVideos[videoId] = true; // Mark as recently added
+    }
+
+    return isVideoInPlaylist;
   } catch (error) {
     logError(`Error checking if video exists in playlist: ${videoId}`, error);
     return false;
@@ -219,7 +254,7 @@ async function main() {
     let newSongsCount = 0;
     let failedSongsCount = 0;
 
-    const videoIds = await searchVideos(song);
+    const videoIds = await searchVideos(songs);
 
     for (const videoId of videoIds) {
       if (videoId) {
@@ -236,16 +271,26 @@ async function main() {
       }
     }
 
-    // Log summary
-    logSummary(`Summary:`);
-    logSummary(`Existing songs: ${existingSongsCount}`);
-    logSummary(`Newly added songs: ${newSongsCount}`);
-    logSummary(`Failed to add songs: ${failedSongsCount}`);
-
     // Add videos to playlist in batch
     await addVideosToPlaylist(playlistId, videoIds);
+
+    // Print quota usage summary
+    logSummary(`Total Quota Used: ${totalQuotaUsed} units`);
+    logSummary(`Quota breakdown:`);
+    logSummary(
+      `  Search requests: ${songs.length} requests x ${
+        QUOTA_COST.search
+      } units = ${songs.length * QUOTA_COST.search} units`
+    );
+    logSummary(
+      `  Playlist operations (create/fetch/add): ${songs.length} requests x ${
+        QUOTA_COST.playlist
+      } units = ${songs.length * QUOTA_COST.playlist} units`
+    );
+    await checkQuota(API_KEY);
   } catch (error) {
     logError("An error occurred during playlist management:", error);
+    await checkQuota(API_KEY);
   }
 }
 

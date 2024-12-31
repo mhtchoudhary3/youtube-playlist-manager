@@ -11,10 +11,10 @@ import http from "http";
 import open from "open"; // Import as an ES module
 import { logError, logInfo, logDebug } from "./logging.js"; // Importing logging
 
-let Oauth2Port = 27862;
+let oauth2Port = 27862;
 const SCOPES = ["https://www.googleapis.com/auth/youtube"];
 const TOKEN_PATH = "OAuthToken.json"; // Save the token here
-const REDIRECT_URL = "http://localhost:" + Oauth2Port; // Redirect URI
+const REDIRECT_URL = "http://localhost:" + oauth2Port; // Redirect URI
 
 // Load the OAuth2 client secrets
 let credentials;
@@ -42,17 +42,25 @@ export default function authorize(callback) {
       const token = fs.readFileSync(TOKEN_PATH, "utf8");
       const parsedToken = JSON.parse(token);
 
-      // Check if token has expired and refresh if necessary
-      if (parsedToken.refresh_token) {
+      if (isTokenExpired(token)) {
+        logInfo("Token has expired, refreshing...");
+
+        refreshAccessToken(oAuth2Client, token.refresh_token)
+          .then((newToken) => {
+            oAuth2Client.setCredentials(newToken);
+            logInfo("Token refreshed and OAuth2 client authorized.");
+            callback(oAuth2Client);
+          })
+          .catch((err) => {
+            logError("Error refreshing token:", err);
+            getNewToken(oAuth2Client, callback);
+          });
+        } else {
+
         oAuth2Client.setCredentials(parsedToken);
         logInfo("Token loaded and OAuth2 client authorized.");
         callback(oAuth2Client);
-      } else {
-        logError(
-          "Refresh token is missing from stored credentials so going by requesting new token.."
-        );
-        getNewToken(oAuth2Client, callback);
-        // process.exit(1);
+ 
       }
     } catch (error) {
       logError("Error reading or parsing token file:", error);
@@ -65,29 +73,45 @@ export default function authorize(callback) {
 }
 
 // Refresh the access token using the stored refresh token
-async function refreshAccessToken() {
+async function refreshAccessToken(oAuth2Client, refresh_token) {
   try {
-    const { credentials } = await oauth2Client.refreshAccessToken();
+    const { credentials } = await oAuth2Client.refreshAccessToken(refresh_token);
     const newAccessToken = credentials.access_token;
-    logInfo("New Access Token: '${newAccessToken}'");
-    return newAccessToken;
+    const newRefreshToken = credentials.refresh_token;
+    const expiry_date = credentials.expiry_date;
+    logInfo(`New Access Token: ${newAccessToken}`);
+
+    // Save the refreshed token
+    const newToken = {
+      access_token: newAccessToken,
+      refresh_token: newRefreshToken,
+      expiry_date: expiry_date
+    };
+    saveToken(newToken); // Save the new token to file
+    return newToken;
   } catch (error) {
     logError("Error refreshing access token:", error);
     throw error;
   }
 }
 
-function handleToken(oAuth2Client, token) {
-  oAuth2Client.setCredentials(token);
+// Save the token to OAuthToken.json
+function saveToken(token) {
   try {
-    // Save the token to the OAuthToken.json file
-    fs.writeFileSync(TOKEN_PATH, JSON.stringify(token)); // Synchronous file write
-    logInfo("Token stored to '${TOKEN_PATH}'");
+    fs.writeFileSync(TOKEN_PATH, JSON.stringify(token));
+    logInfo(`Token stored to '${TOKEN_PATH}`);
   } catch (error) {
     logError("Error storing the token:", error);
-    return;
   }
 }
+
+// Check if the token has expired
+function isTokenExpired(token) {
+  const expiryDate = token.expiry_date;
+  const now = Date.now();
+  return expiryDate <= now;
+}
+
 
 // Get and store a new token after prompting for user authorization
 function getNewToken(oAuth2Client, callback) {
@@ -101,7 +125,7 @@ function getNewToken(oAuth2Client, callback) {
 
   // Create a local server to handle the OAuth callback
   const server = http.createServer((req, res) => {
-    logInfo("Incoming request URL: '${req.url}'"); // Log the URL of the request
+    logInfo(`Incoming request URL: ${req.url}`); // Log the URL of the request
     if (req.url.indexOf("/?code=") > -1) {
       const code = new URL(
         req.url,
@@ -114,20 +138,9 @@ function getNewToken(oAuth2Client, callback) {
           return;
         }
 
-        // Check if refresh_token exists in the response
-        if (!token.refresh_token) {
-          logError(
-            "Refresh token is missing in the response but still storing the token."
-          );
-          // res.end("Authentication failed as refresh token is missing in the response.");
-          // server.close();
-        } else {
-          logInfo("Refresh token found: ${token.refresh_token}'");
-        }
+  // Save the token to the file
+  saveToken(token);
 
-        logInfo("Token received: '${token}'");
-
-        handleToken(oAuth2Client, token);
 
         res.end("Authentication successful! You can close this window.");
         callback(oAuth2Client);
@@ -136,8 +149,8 @@ function getNewToken(oAuth2Client, callback) {
     }
   });
 
-  server.listen(Oauth2Port, () => {
-    logInfo("Listening on http://localhost: '${Oauth2Portl}'");
+  server.listen(oauth2Port, () => {
+    logInfo(`Listening on http://localhost: ${oauth2Port}`);
   });
 
   // Open the URL in the browser for the user to authenticate
