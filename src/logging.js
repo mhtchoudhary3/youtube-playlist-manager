@@ -1,24 +1,24 @@
 // Example of different colors using ANSI escape codes
 
 // Reset code
-const reset = "\x1b[0m";
+const reset = '\x1b[0m';
 
 // Text color codes
-const red = "\x1b[31m";
-const green = "\x1b[32m";
-const yellow = "\x1b[33m";
-const blue = "\x1b[34m";
-const magenta = "\x1b[35m";
-const cyan = "\x1b[36m";
-const white = "\x1b[37m";
-const blackText = "\x1b[30m"; // Black text
+const red = '\x1b[31m';
+const green = '\x1b[32m';
+const yellow = '\x1b[33m';
+const blue = '\x1b[34m';
+const magenta = '\x1b[35m';
+const cyan = '\x1b[36m';
+const white = '\x1b[37m';
+const blackText = '\x1b[30m'; // Black text
 
 // Background color codes
-const bgRed = "\x1b[41m";
-const bgGreen = "\x1b[42m";
-const bgYellow = "\x1b[43m";
-const bgBlue = "\x1b[44m";
-const whiteBackground = "\x1b[48;5;15m"; // White background
+const bgRed = '\x1b[41m';
+const bgGreen = '\x1b[42m';
+const bgYellow = '\x1b[43m';
+const bgBlue = '\x1b[44m';
+const whiteBackground = '\x1b[48;5;15m'; // White background
 
 // Usage example
 // console.log(`${green}This is a green message${reset}`);

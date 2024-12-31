@@ -1,9 +1,9 @@
 // Jest configuration
-import { defaults } from "jest-config";
+import { defaults } from 'jest-config';
 
 /** @type {import('jest').Config} */
 const config = {
-  moduleFileExtensions: [...defaults.moduleFileExtensions, "mts", "cts"],
+  moduleFileExtensions: [...defaults.moduleFileExtensions, 'mts', 'cts'],
   transform: {},
 };
 
