@@ -1,16 +1,16 @@
-import fs from "fs";
-import axios from "axios";
-import authorize from "./src/auth.js";
-import { logError, logInfo, logDebug, logSummary } from "./src/logging.js";
-import parseSongList from "./src/songParser.js";
-import checkQuota from "./src/apiQuota.js";
-import dotenv from "dotenv";
-import { APIError, handleError } from "./src/errorHandling.js";
+import fs from 'fs';
+import axios from 'axios';
+import authorize from './src/auth.js';
+import { logError, logInfo, logDebug, logSummary } from './src/logging.js';
+import parseSongList from './src/songParser.js';
+import checkQuota from './src/apiQuota.js';
+import dotenv from 'dotenv';
+import { APIError, handleError } from './src/errorHandling.js';
 
 dotenv.config(); // Load environment variables from .env file
 
-const playlistTitle = "My New Playlist";
-const playlistDescription = "A playlist created from a text list of songs";
+const playlistTitle = 'My New Playlist';
+const playlistDescription = 'A playlist created from a text list of songs';
 
 /**
  * API Key is used for public access to the API (like searching public videos on YouTube).
@@ -38,7 +38,7 @@ async function getAllPlaylists() {
 
   do {
     const url = `${BASE_URL}/playlists?part=snippet&mine=true&pageToken=${
-      nextPageToken || ""
+      nextPageToken || ''
     }`;
     try {
       const response = await axios.get(url, { headers });
@@ -46,7 +46,7 @@ async function getAllPlaylists() {
       nextPageToken = response.data.nextPageToken;
       logInfo(`Fetched playlists page: ${nextPageToken}`);
     } catch (error) {
-      handleError(error, "fetching playlists");
+      handleError(error, 'fetching playlists');
       break;
     }
   } while (nextPageToken); // Continue fetching as long as there's a next page token
@@ -61,13 +61,13 @@ async function getPlaylists() {
     const response = await axios.get(url, { headers });
     totalQuotaUsed += QUOTA_COST.playlist; // Add quota cost for playlist fetch
     logInfo(
-      `Fetched playlists: ${response.data.items.length} playlists found.`
+      `Fetched playlists: ${response.data.items.length} playlists found.`,
     );
     return response.data.items || [];
   } catch (error) {
-    logDebug("Playlist URL: " + url);
-    handleError(error, "fetching playlists");
-    throw new Error("PlayListFetchError");
+    logDebug('Playlist URL: ' + url);
+    handleError(error, 'fetching playlists');
+    throw new Error('PlayListFetchError');
   }
 }
 
@@ -75,7 +75,7 @@ async function getPlaylists() {
 async function createPlaylist(title, description) {
   const data = {
     snippet: { title, description },
-    status: { privacyStatus: "public" },
+    status: { privacyStatus: 'public' },
   };
   const url = `${BASE_URL}/playlists?part=snippet,status`;
   try {
@@ -84,8 +84,8 @@ async function createPlaylist(title, description) {
     logInfo(`Created new playlist: '${title}' with ID: ${response.data.id}`);
     return response.data.id;
   } catch (error) {
-    handleError(error, "Error creating playlist");
-    throw new Error("PlayListCreateError");
+    handleError(error, 'Error creating playlist');
+    throw new Error('PlayListCreateError');
   }
 }
 
@@ -106,7 +106,7 @@ async function searchVideos(songs) {
     }
 
     const url = `${BASE_URL}/search?part=snippet&q=${encodeURIComponent(
-      song
+      song,
     )}&type=video&key=${API_KEY}`;
 
     logDebug(`Request URL: ${url}`);
@@ -126,8 +126,8 @@ async function searchVideos(songs) {
         }
       })
       .catch((error) => {
-        handleError(error, "Error during video search " + song);
-        throw new APIError("VideoSearchError", 500);
+        handleError(error, 'Error during video search ' + song);
+        throw new APIError('VideoSearchError', 500);
       });
   });
 
@@ -143,7 +143,7 @@ async function addVideosToPlaylist(playlistId, videoIds) {
       snippet: {
         playlistId,
         resourceId: {
-          kind: "youtube#video",
+          kind: 'youtube#video',
           videoId,
         },
       },
@@ -156,9 +156,9 @@ async function addVideosToPlaylist(playlistId, videoIds) {
   data.forEach((item) => {
     batch.add(
       youtube.playlistItems.insert({
-        part: "snippet",
+        part: 'snippet',
         resource: item,
-      })
+      }),
     );
   });
 
@@ -167,8 +167,8 @@ async function addVideosToPlaylist(playlistId, videoIds) {
     totalQuotaUsed += QUOTA_COST.playlist * data.length; // Add quota cost for adding videos to playlist
     logInfo(`Added ${data.length} videos to playlist (ID: ${playlistId})`);
   } catch (error) {
-    handleError(error, "Error while adding to playlist ID " + playlistId);
-    throw new APIError("PlayListSongAdditionError", 500);
+    handleError(error, 'Error while adding to playlist ID ' + playlistId);
+    throw new APIError('PlayListSongAdditionError', 500);
   }
 }
 
@@ -185,7 +185,7 @@ async function isVideoInPlaylist(playlistId, videoId) {
   try {
     const response = await axios.get(url, { headers });
     const isVideoInPlaylist = response.data.items.some(
-      (item) => item.snippet.resourceId.videoId === videoId
+      (item) => item.snippet.resourceId.videoId === videoId,
     );
 
     if (isVideoInPlaylist) {
@@ -202,39 +202,39 @@ async function isVideoInPlaylist(playlistId, videoId) {
 // Main function to manage the playlist and add videos
 async function main() {
   try {
-    oAuthTokenConfig = JSON.parse(fs.readFileSync("OAuthToken.json", "utf8"));
-    logInfo("Successfully loaded token file.");
+    oAuthTokenConfig = JSON.parse(fs.readFileSync('OAuthToken.json', 'utf8'));
+    logInfo('Successfully loaded token file.');
   } catch (error) {
-    logError("Error reading or parsing OAuthToken.json:", error);
+    logError('Error reading or parsing OAuthToken.json:', error);
     process.exit(1); // Exit the process if OAuthToken.json cannot be loaded
   }
 
   ACCESS_TOKEN = oAuthTokenConfig.access_token;
-  BASE_URL = "https://www.googleapis.com/youtube/v3";
+  BASE_URL = 'https://www.googleapis.com/youtube/v3';
 
   if (!API_KEY) {
-    logError("API Key is missing in OAuthToken.json");
+    logError('API Key is missing in OAuthToken.json');
     process.exit(1);
   }
   if (!ACCESS_TOKEN) {
-    logError("Access Token is missing in OAuthToken.json");
+    logError('Access Token is missing in OAuthToken.json');
     process.exit(1);
   }
 
   headers = {
     Authorization: `Bearer ${ACCESS_TOKEN}`,
-    "Content-Type": "application/json",
+    'Content-Type': 'application/json',
   };
 
   let playlistId = null;
 
   try {
-    const playlists = await getPlaylists();
+    const playlists = await getAllPlaylists();
     for (const playlist of playlists) {
       if (playlist.snippet.title === playlistTitle) {
         playlistId = playlist.id;
         logInfo(
-          `Playlist '${playlistTitle}' already exists. ID: ${playlistId} & playlistTitle: ${playlistTitle}`
+          `Playlist '${playlistTitle}' already exists. ID: ${playlistId} & playlistTitle: ${playlistTitle}`,
         );
         break;
       }
@@ -243,11 +243,11 @@ async function main() {
     if (!playlistId) {
       playlistId = await createPlaylist(playlistTitle, playlistDescription);
       logInfo(
-        `Created new playlist. ID: ${playlistId} & playlistTitle: ${playlistTitle}`
+        `Created new playlist. ID: ${playlistId} & playlistTitle: ${playlistTitle}`,
       );
     }
 
-    const songs = parseSongList("songs.txt");
+    const songs = parseSongList('songs.txt');
 
     // Track the counters
     let existingSongsCount = 0;
@@ -280,16 +280,16 @@ async function main() {
     logSummary(
       `  Search requests: ${songs.length} requests x ${
         QUOTA_COST.search
-      } units = ${songs.length * QUOTA_COST.search} units`
+      } units = ${songs.length * QUOTA_COST.search} units`,
     );
     logSummary(
       `  Playlist operations (create/fetch/add): ${songs.length} requests x ${
         QUOTA_COST.playlist
-      } units = ${songs.length * QUOTA_COST.playlist} units`
+      } units = ${songs.length * QUOTA_COST.playlist} units`,
     );
     await checkQuota(API_KEY);
   } catch (error) {
-    logError("An error occurred during playlist management:", error);
+    logError('An error occurred during playlist management:', error);
     await checkQuota(API_KEY);
   }
 }

@@ -1,14 +1,13 @@
-name: Node.js CI
+name: YouTube Playlist Manager
 
 on:
   push:
     branches:
       - master
-      - dev  # Include other branches you want to check
+      - '*' # Include other branches you want to check
   pull_request:
     branches:
-      - main
-      - dev  # Include branches you want to enforce tests for pull requests
+      - '*' # Include branches you want to enforce tests for pull requests
 
 jobs:
   test:
@@ -23,11 +22,19 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '16'  # Specify the Node.js version you're using
+          node-version: '16' # Specify the Node.js version you're using
 
       # Install dependencies
       - name: Install dependencies
         run: npm install
+
+      # Run ESLint to check code style
+      - name: Run ESLint
+        run: npx eslint . --max-warnings=0 # Fail the workflow if there are linting issues
+
+      # Run Prettier to check formatting
+      - name: Run Prettier check
+        run: npx prettier --check . # Check for code formatting issues
 
       # Run Jest tests
       - name: Run tests
