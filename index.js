@@ -31,6 +31,29 @@ let BASE_URL;
 let headers;
 const API_KEY = process.env.YOUTUBE_API_KEY;
 
+//When retrieving playlists or videos, always handle pagination to avoid hitting API limits.
+async function getAllPlaylists() {
+  let playlists = [];
+  let nextPageToken = null;
+
+  do {
+    const url = `${BASE_URL}/playlists?part=snippet&mine=true&pageToken=${
+      nextPageToken || ""
+    }`;
+    try {
+      const response = await axios.get(url, { headers });
+      playlists = playlists.concat(response.data.items || []);
+      nextPageToken = response.data.nextPageToken;
+      logInfo(`Fetched playlists page: ${nextPageToken}`);
+    } catch (error) {
+      handleError(error, "fetching playlists");
+      break;
+    }
+  } while (nextPageToken); // Continue fetching as long as there's a next page token
+
+  return playlists;
+}
+
 // Fetch playlists from the authenticated user
 async function getPlaylists() {
   const url = `${BASE_URL}/playlists?part=snippet&mine=true`;
@@ -66,6 +89,9 @@ async function createPlaylist(title, description) {
   }
 }
 
+//Cache the results of previous searches and only perform a new search if the song is not already in the cache.
+const searchCache = {};
+
 /**
  * Search for multiple videos on YouTube using batch API calls
  * API Key is used for public access to the API (like searching public videos on YouTube).
@@ -74,9 +100,15 @@ async function createPlaylist(title, description) {
  */
 async function searchVideos(songs) {
   const batchRequests = songs.map((song) => {
+    if (searchCache[song]) {
+      logInfo(`Using cached result for '${song}'`);
+      return Promise.resolve(searchCache[song]);
+    }
+
     const url = `${BASE_URL}/search?part=snippet&q=${encodeURIComponent(
       song
     )}&type=video&key=${API_KEY}`;
+
     logDebug(`Request URL: ${url}`);
 
     return axios
@@ -84,6 +116,7 @@ async function searchVideos(songs) {
       .then((response) => {
         const items = response.data.items || [];
         if (items.length > 0) {
+          searchCache[song] = items[0].id.videoId; // Cache the result
           totalQuotaUsed += QUOTA_COST.search; // Add quota cost for search
           logInfo(`Found video for '${song}': ${items[0].snippet.title}`);
           return items[0].id.videoId;
@@ -102,6 +135,7 @@ async function searchVideos(songs) {
 }
 
 // Add videos to a playlist (batch operation)
+// Batch multiple requests into a single API call, rather than sending separate requests for each video.
 async function addVideosToPlaylist(playlistId, videoIds) {
   const data = videoIds
     .filter((videoId) => videoId !== null) // Filter out null values
@@ -117,10 +151,20 @@ async function addVideosToPlaylist(playlistId, videoIds) {
 
   if (data.length === 0) return;
 
-  const url = `${BASE_URL}/playlistItems?part=snippet`;
+  // Sending a batch request
+  const batch = youtube.newBatch();
+  data.forEach((item) => {
+    batch.add(
+      youtube.playlistItems.insert({
+        part: "snippet",
+        resource: item,
+      })
+    );
+  });
+
   try {
-    await axios.post(url, data, { headers });
-    totalQuotaUsed += QUOTA_COST.playlist; // Add quota cost for adding videos to playlist
+    const _response = await batch.execute();
+    totalQuotaUsed += QUOTA_COST.playlist * data.length; // Add quota cost for adding videos to playlist
     logInfo(`Added ${data.length} videos to playlist (ID: ${playlistId})`);
   } catch (error) {
     handleError(error, "Error while adding to playlist ID " + playlistId);
@@ -128,14 +172,27 @@ async function addVideosToPlaylist(playlistId, videoIds) {
   }
 }
 
+let recentVideos = {}; // Cache to track videos added recently
+
 // Check if a video already exists in the playlist
+// Before adding a video to the playlist, you can optimize checking whether the video already exists in the playlist by only checking if the video has been added in the last few days or if a certain amount of time has passed since the last check.
 async function isVideoInPlaylist(playlistId, videoId) {
+  if (recentVideos[videoId]) {
+    return true; // Skip checking if the video is recently added
+  }
+
   const url = `${BASE_URL}/playlistItems?part=snippet&playlistId=${playlistId}`;
   try {
     const response = await axios.get(url, { headers });
-    return response.data.items.some(
+    const isVideoInPlaylist = response.data.items.some(
       (item) => item.snippet.resourceId.videoId === videoId
     );
+
+    if (isVideoInPlaylist) {
+      recentVideos[videoId] = true; // Mark as recently added
+    }
+
+    return isVideoInPlaylist;
   } catch (error) {
     logError(`Error checking if video exists in playlist: ${videoId}`, error);
     return false;

@@ -1,4 +1,4 @@
-module.exports = {
+module. exports = {
   presets: [
     [
       "@babel/preset-env",
@@ -8,6 +8,7 @@ module.exports = {
           modules: "auto", // This ensures Babel handles ES modules
         },
       },
+      "@babel/preset-react"
     ],
   ],
 };
