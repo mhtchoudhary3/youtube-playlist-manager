@@ -30,6 +30,10 @@ jobs:
 
       # Run ESLint to check code style
       - name: Run ESLint
+        run: npx eslint . --max-warnings=37 # Fail the workflow if there are linting issues
+
+      # Run ESLint to check code style
+      - name: Run ESLint
         run: npx eslint . --max-warnings=0 # Fail the workflow if there are linting issues
 
       # Run Prettier to check formatting
