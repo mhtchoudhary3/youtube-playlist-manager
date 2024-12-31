@@ -48,3 +48,46 @@ jobs:
           key: ${{ runner.os }}-node-modules-${{ hashFiles('**/package-lock.json') }}
           restore-keys: |
             ${{ runner.os }}-node-modules-
+  
+   create-pr:
+    runs-on: ubuntu-latest
+    needs: test
+    if: github.ref != 'refs/heads/master' # Only create PR if the branch is not master
+
+    steps:
+      # Checkout the repository code
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # Set up Git configuration with the pusher's user details
+      - name: Set up Git configuration
+        run: |
+          git config --global user.name "${{ github.actor }}"  # Use the GitHub actor's username
+          git config --global user.email "${{ github.actor }}@users.noreply.github.com"  # Use a GitHub-generated email
+
+      # Get the commit message of the first commit
+      - name: Get the commit message
+        id: commit_message
+        run: |
+          COMMIT_MSG=$(git log --format=%B -n 1)
+          echo "Commit message: $COMMIT_MSG"
+          echo "::set-output name=commit_message::$COMMIT_MSG"
+
+      # Push the branch and create a PR
+      - name: Push branch and create PR
+        run: |
+          BRANCH_NAME="${GITHUB_REF#refs/heads/}"  # Extract the branch name (without refs/heads/)
+          git checkout -b $BRANCH_NAME
+          git add .
+          git commit -m "Auto-fix code style issues with Prettier and ESLint"
+          git push origin $BRANCH_NAME
+
+      # Create a pull request
+      - name: Create Pull Request
+        uses: peter-evans/create-pull-request@v3
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          title: "${{ steps.commit_message.outputs.commit_message }}"  # PR title based on the commit message
+          body: "This PR fixes code style issues using Prettier and ESLint."
+          head: ${{ github.head_ref }}  # The branch being pushed
+          base: master  # PR to master, change to another branch if needed
