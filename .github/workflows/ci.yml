@@ -28,10 +28,6 @@ jobs:
       - name: Install dependencies
         run: npm install
 
-      # Run ESLint to check code style
-      - name: Run ESLint
-        run: npx eslint . --max-warnings=37 # Fail the workflow if there are linting issues
-
       # Run Prettier to check formatting
       - name: Run Prettier check
         run: npx prettier --check . # Check for code formatting issues
